@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  telegram-bot:
+    container_name: telegram-bot
+    image: ghcr.io/jeremiemarotte/telegramToImmich:latest
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
