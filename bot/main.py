@@ -94,4 +94,20 @@ async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     upload_to_immich(file_path)
     os.remove(file_path)
     
-    if size < 1_048_5
+    if size < 1_048_576:
+        await context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo=open('/app/explication.jpeg', 'rb'),
+            caption='⚠️ La photo est de *mauvaise qualité*.\n Pense à la télécharger via *Fichier > Galerie*. 😉',
+            parse_mode='Markdown'
+        )
+
+# === Lancement de l'application synchronisée ===
+if __name__ == '__main__':
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+
+    app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
+    app.add_handler(MessageHandler(filters.Document.IMAGE, document_handler))
+    logger.info("🤖 Bot actif, en attente de photos…")
+    print("🤖 Bot actif, en attente de photos…")
+    app.run_polling()
