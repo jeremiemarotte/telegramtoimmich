@@ -10,6 +10,11 @@ import json
 import asyncio
 from datetime import datetime
 
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+IMMICH_API_URL = os.environ.get("IMMICH_API_URL")
+IMMICH_API_KEY = os.environ.get("IMMICH_API_KEY")
+IMMICH_ALBUM_ID = os.environ.get("IMMICH_ALBUM_ID")
+
 HEADERS = {
     'Accept': 'application/json',
     "x-api-key": IMMICH_API_KEY
