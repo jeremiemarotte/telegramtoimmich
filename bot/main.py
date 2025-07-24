@@ -74,16 +74,20 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file_path = f"/tmp/{file.file_id}.jpg"
 
     await file.download_to_drive(file_path)
+    
+    size = os.path.getsize(file_path)  # ← Taille du fichier en octets
+
     upload_to_immich(file_path)
     os.remove(file_path)
     
-    if size < 1_048_576:
+    if size < 1_048_576:  # Moins de 1 Mo
         await context.bot.send_photo(
             chat_id=update.effective_chat.id,
-            photo=open('/app/explaination.png', 'rb'),
+            photo=open('/app/explication.jpeg', 'rb'),
             caption='⚠️ La photo est de *mauvaise qualité*.\n Pense à la télécharger via *Fichier > Galerie*. 😉',
             parse_mode='Markdown'
         )
+
 
 # === Handler des documents image ===
 async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -96,6 +100,9 @@ async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file_path = f"/tmp/{doc.file_id}{ext}"
 
     await file.download_to_drive(file_path)
+    
+    size = os.path.getsize(file_path)  # ← Taille du fichier
+
     upload_to_immich(file_path)
     os.remove(file_path)
     
