@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Import du fichier "Explaination" qui permet de prévenir si la photo n'a pas été correctement importée
-IMG_PATH = Path(__file__).parent / "assets" / "explaination.png"
+IMG_PATH = "/app/assets/explaination.png"
 
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
