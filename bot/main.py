@@ -9,6 +9,11 @@ import os
 import json
 import asyncio
 from datetime import datetime
+from pathlib import Path
+
+# Import du fichier "Explaination" qui permet de prévenir si la photo n'a pas été correctement importée
+IMG_PATH = Path(__file__).parent / "assets" / "explaination.png"
+
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 IMMICH_API_URL = os.environ.get("IMMICH_API_URL")
@@ -83,7 +88,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if size < 1_048_576:  # Moins de 1 Mo
         await context.bot.send_photo(
             chat_id=update.effective_chat.id,
-            photo=open('/bot/explaination.png', 'rb'),
+            photo=open(IMG_PATH, 'rb'),
             caption='⚠️ La photo est de *mauvaise qualité*.\n Pense à la télécharger via *Fichier > Galerie*. 😉',
             parse_mode='Markdown'
         )
@@ -109,7 +114,7 @@ async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if size < 1_048_576:
         await context.bot.send_photo(
             chat_id=update.effective_chat.id,
-            photo=open('/bot/explaination.png', 'rb'),
+            photo=open(IMG_PATH, 'rb'),
             caption='⚠️ La photo est de *mauvaise qualité*.\n Pense à la télécharger via *Fichier > Galerie*. 😉',
             parse_mode='Markdown'
         )
