@@ -56,11 +56,11 @@ def upload_to_immich(file_path: str):
                 'fileModifiedAt': datetime.fromtimestamp(stats.st_mtime),
                 'isFavorite': 'false',
             }
-            response = requests.post(f"{IMMICH_URL}/assets", headers=HEADERS, files=files, data=data)
+            response = requests.post(f"{IMMICH_API_URL}/assets", headers=HEADERS, files=files, data=data)
             idAsset = response.json().get('id')
             payload = json.dumps({ "ids": [idAsset] })
 
-            response_album = requests.put(f"{IMMICH_URL}/albums/{IMMICH_ALBUM_ID}/assets", headers=headers1, data=payload)
+            response_album = requests.put(f"{IMMICH_API_URL}/albums/{IMMICH_ALBUM_ID}/assets", headers=headers1, data=payload)
 
         if response.status_code == 201:
             logger.info(f"✅ Image envoyée : {os.path.basename(file_path)}")
