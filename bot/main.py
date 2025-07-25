@@ -83,7 +83,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if size < 1_048_576:  # Moins de 1 Mo
         await context.bot.send_photo(
             chat_id=update.effective_chat.id,
-            photo=open('/app/explication.jpeg', 'rb'),
+            photo=open('/bot/explaination.png', 'rb'),
             caption='⚠️ La photo est de *mauvaise qualité*.\n Pense à la télécharger via *Fichier > Galerie*. 😉',
             parse_mode='Markdown'
         )
@@ -109,7 +109,7 @@ async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if size < 1_048_576:
         await context.bot.send_photo(
             chat_id=update.effective_chat.id,
-            photo=open('/app/explication.jpeg', 'rb'),
+            photo=open('/bot/explaination.png', 'rb'),
             caption='⚠️ La photo est de *mauvaise qualité*.\n Pense à la télécharger via *Fichier > Galerie*. 😉',
             parse_mode='Markdown'
         )
