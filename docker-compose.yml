@@ -6,7 +6,7 @@ services:
     image: ghcr.io/jeremiemarotte/telegramtoimmich:latest
     restart: unless-stopped
     environment:
-      - TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      - IMMICH_API_URL: ${IMMICH_API_URL}
-      - IMMICH_API_KEY: ${IMMICH_API_KEY}
-      - IMMICH_ALBUM_ID: ${IMMICH_ALBUM_ID}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      IMMICH_API_URL: ${IMMICH_API_URL}
+      IMMICH_API_KEY: ${IMMICH_API_KEY}
+      IMMICH_ALBUM_ID: ${IMMICH_ALBUM_ID}

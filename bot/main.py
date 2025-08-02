@@ -6,6 +6,7 @@ from telegram.ext import (
 import logging
 import requests
 import os
+from dotenv import load_dotenv
 import json
 import asyncio
 from datetime import datetime
@@ -15,10 +16,17 @@ from pathlib import Path
 IMG_PATH = "/app/assets/explaination.png"
 
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-IMMICH_API_URL = os.environ.get("IMMICH_API_URL")
-IMMICH_API_KEY = os.environ.get("IMMICH_API_KEY")
-IMMICH_ALBUM_ID = os.environ.get("IMMICH_ALBUM_ID")
+load_dotenv()  # Charge les variables depuis le .env
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+IMMICH_API_URL = os.getenv("IMMICH_API_URL")
+IMMICH_API_KEY = os.getenv("IMMICH_API_KEY")
+IMMICH_ALBUM_ID = os.getenv("IMMICH_ALBUM_ID")
+
+print("TOKEN =", os.getenv("TELEGRAM_BOT_TOKEN"))
 
 HEADERS = {
     'Accept': 'application/json',
@@ -123,8 +131,9 @@ async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
+
     app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
-    app.add_handler(MessageHandler(filters.Document.IMAGE, document_handler))
+    app.add_handler(MessageHandler(filters.Document.IMAGE | filters.VIDEO, document_handler))
     logger.info("🤖 Bot actif, en attente de photos…")
     print("🤖 Bot actif, en attente de photos…")
     app.run_polling()
