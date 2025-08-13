@@ -26,8 +26,6 @@ IMMICH_API_URL = os.getenv("IMMICH_API_URL")
 IMMICH_API_KEY = os.getenv("IMMICH_API_KEY")
 IMMICH_ALBUM_ID = os.getenv("IMMICH_ALBUM_ID")
 
-print("TOKEN =", os.getenv("TELEGRAM_BOT_TOKEN"))
-
 HEADERS = {
     'Accept': 'application/json',
     "x-api-key": IMMICH_API_KEY
@@ -101,11 +99,24 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
 
+# === Handler des vidéos Telegram ===
+async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    video = update.message.video
+    file = await video.get_file()
+    file_path = f"/tmp/{file.file_id}.jpg"
+
+    await file.download_to_drive(file_path)
+    
+    size = os.path.getsize(file_path)  # ← Taille du fichier en octets
+
+    upload_to_immich(file_path)
+    os.remove(file_path)
+
 
 # === Handler des documents image ===
 async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     doc = update.message.document
-    if not doc.mime_type.startswith("image/"):
+    if not doc.mime_type.startswith("image/") | doc.mime_type.startswith("video/") :
         return
 
     file = await doc.get_file()
@@ -133,7 +144,8 @@ if __name__ == '__main__':
 
 
     app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
-    app.add_handler(MessageHandler(filters.Document.IMAGE | filters.VIDEO, document_handler))
+    app.add_handler(MessageHandler(filters.VIDEO, video_handler))
+    app.add_handler(MessageHandler(filters.Document.IMAGE | filters.Document.VIDEO, document_handler))
     logger.info("🤖 Bot actif, en attente de photos…")
     print("🤖 Bot actif, en attente de photos…")
     app.run_polling()
