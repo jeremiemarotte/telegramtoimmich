@@ -103,7 +103,8 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     video = update.message.video
     file = await video.get_file()
-    file_path = f"/tmp/{file.file_id}.jpg"
+    ext = os.path.splitext(doc.file_name)[-1]
+    file_path = f"/tmp/{file.file_id}{ext}"
 
     await file.download_to_drive(file_path)
     
