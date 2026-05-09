@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(& c:\\\\Users\\\\jerem\\\\git\\\\telegramtoimmich\\\\.venv\\\\Scripts\\\\python.exe -m pip show python-telegram-bot)",
+      "PowerShell(& c:\\\\Users\\\\jerem\\\\git\\\\telegramtoimmich\\\\.venv\\\\Scripts\\\\python.exe -m pip uninstall python-telegram-bot -y)",
+      "PowerShell(& c:\\\\Users\\\\jerem\\\\git\\\\telegramtoimmich\\\\.venv\\\\Scripts\\\\python.exe -m pip install python-telegram-bot==20.7 --no-cache-dir)",
+      "PowerShell(& c:\\\\Users\\\\jerem\\\\git\\\\telegramtoimmich\\\\.venv\\\\Scripts\\\\python.exe -c \"import telegram; print\\(telegram.__file__\\)\")",
+      "PowerShell(& c:\\\\Users\\\\jerem\\\\git\\\\telegramtoimmich\\\\.venv\\\\Scripts\\\\python.exe -c \"import inspect, telegram.ext._updater as u; print\\(inspect.getsourcefile\\(u.Updater\\)\\)\")",
+      "PowerShell(& c:\\\\Users\\\\jerem\\\\git\\\\telegramtoimmich\\\\.venv\\\\Scripts\\\\python.exe -c \"from telegram.ext import ApplicationBuilder; print\\('OK'\\)\")",
+      "PowerShell(& c:\\\\Users\\\\jerem\\\\git\\\\telegramtoimmich\\\\.venv\\\\Scripts\\\\python.exe -m pip index versions python-telegram-bot 2>&1)",
+      "PowerShell(& c:\\\\Users\\\\jerem\\\\git\\\\telegramtoimmich\\\\.venv\\\\Scripts\\\\python.exe -c \"from telegram.ext import ApplicationBuilder; app = ApplicationBuilder\\(\\).token\\('test'\\).build\\(\\); print\\('OK'\\)\" 2>&1)",
+      "PowerShell(Test-NetConnection -ComputerName 192.168.1.41 -Port 30041 -WarningAction SilentlyContinue)"
+    ]
+  }
+}

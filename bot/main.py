@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 import json
 import asyncio
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -41,8 +42,8 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
-        logging.FileHandler("bot.log"),      # Log dans un fichier
-        logging.StreamHandler()              # Log aussi dans la console
+        logging.FileHandler("bot.log", encoding="utf-8"),
+        logging.StreamHandler(stream=open(1, "w", encoding="utf-8", closefd=False)),
     ]
 )
 
@@ -82,7 +83,7 @@ def upload_to_immich(file_path: str):
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo = update.message.photo[-1]
     file = await photo.get_file()
-    file_path = f"/tmp/{file.file_id}.jpg"
+    file_path = os.path.join(tempfile.gettempdir(), f"{file.file_id}.jpg")
 
     await file.download_to_drive(file_path)
     
@@ -104,10 +105,10 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     video = update.message.video
     file = await video.get_file()
     ext = os.path.splitext(doc.file_name)[-1]
-    file_path = f"/tmp/{file.file_id}{ext}"
+    file_path = os.path.join(tempfile.gettempdir(), f"{file.file_id}{ext}")
 
     await file.download_to_drive(file_path)
-    
+
     size = os.path.getsize(file_path)  # ← Taille du fichier en octets
 
     upload_to_immich(file_path)
@@ -122,7 +123,7 @@ async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     file = await doc.get_file()
     ext = os.path.splitext(doc.file_name)[-1]
-    file_path = f"/tmp/{doc.file_id}{ext}"
+    file_path = os.path.join(tempfile.gettempdir(), f"{doc.file_id}{ext}")
 
     await file.download_to_drive(file_path)
     
