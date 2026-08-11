@@ -3,6 +3,7 @@ from telegram.ext import (
     ApplicationBuilder, ContextTypes,
     MessageHandler, CommandHandler, filters
 )
+from telegram.error import TelegramError
 import logging
 import requests
 import os
@@ -10,7 +11,7 @@ from dotenv import load_dotenv
 import json
 import asyncio
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 IMG_PATH = "/app/assets/explaination.png"
@@ -63,7 +64,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def upload_to_immich(file_path: str, api_key: str, album_id: str):
+def upload_to_immich(file_path: str, api_key: str, album_id: str) -> bool:
+    """Envoie le fichier à Immich puis l'ajoute à l'album. Renvoie True si les deux étapes réussissent."""
     headers_upload = {
         'Accept': 'application/json',
         'x-api-key': api_key,
@@ -73,6 +75,7 @@ def upload_to_immich(file_path: str, api_key: str, album_id: str):
         'Content-Type': 'application/json',
         'Accept': 'application/json',
     }
+
     try:
         with open(file_path, 'rb') as f:
             stats = os.stat(file_path)
@@ -80,99 +83,123 @@ def upload_to_immich(file_path: str, api_key: str, album_id: str):
             data = {
                 'deviceAssetId': f'{file_path}-{stats.st_mtime}',
                 'deviceId': 'Telegram',
-                'fileCreatedAt': datetime.fromtimestamp(stats.st_mtime),
-                'fileModifiedAt': datetime.fromtimestamp(stats.st_mtime),
+                'fileCreatedAt': datetime.fromtimestamp(stats.st_mtime, tz=timezone.utc).isoformat(),
+                'fileModifiedAt': datetime.fromtimestamp(stats.st_mtime, tz=timezone.utc).isoformat(),
                 'isFavorite': 'false',
             }
             response = requests.post(f"{IMMICH_API_URL}/assets", headers=headers_upload, files=files, data=data)
-            id_asset = response.json().get('id')
-            payload = json.dumps({"ids": [id_asset]})
-            response_album = requests.put(
-                f"{IMMICH_API_URL}/albums/{album_id}/assets",
-                headers=headers_album,
-                data=payload,
+    except requests.exceptions.RequestException as e:
+        logger.error(f"🚨 Immich injoignable lors de l'upload de {os.path.basename(file_path)} : {e}")
+        return False
+
+    if response.status_code != 201:
+        logger.error(
+            f"❌ Échec de l'upload Immich ({response.status_code}) pour {os.path.basename(file_path)} : {response.text}"
+        )
+        return False
+
+    id_asset = response.json().get('id')
+    logger.info(f"✅ Fichier envoyé à Immich : {os.path.basename(file_path)} (asset={id_asset})")
+
+    try:
+        response_album = requests.put(
+            f"{IMMICH_API_URL}/albums/{album_id}/assets",
+            headers=headers_album,
+            data=json.dumps({"ids": [id_asset]}),
+        )
+    except requests.exceptions.RequestException as e:
+        logger.error(f"🚨 Immich injoignable lors de l'ajout à l'album {album_id} (asset={id_asset}) : {e}")
+        return False
+
+    if response_album.status_code != 200:
+        logger.error(
+            f"❌ Échec de l'ajout à l'album {album_id} (asset={id_asset}) : {response_album.status_code} - {response_album.text}"
+        )
+        return False
+
+    logger.debug(f"Réponse album : {response_album.text}")
+    return True
+
+
+async def _process_media(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    telegram_file,
+    ext_fallback: str,
+    check_quality: bool,
+):
+    """Télécharge un fichier Telegram puis l'envoie à Immich, avec un diagnostic distinct pour chaque étape."""
+    user_id = update.message.from_user.id
+    username = update.message.from_user.full_name
+    config = get_user_config(user_id)
+
+    try:
+        file = await telegram_file.get_file()
+    except TelegramError as e:
+        logger.error(f"❌ getFile Telegram a échoué pour {username} (id={user_id}) : {e}")
+        return
+
+    ext = os.path.splitext(telegram_file.file_name)[-1] if getattr(telegram_file, "file_name", None) else ext_fallback
+    file_path = os.path.join(tempfile.gettempdir(), f"{file.file_id}{ext}")
+
+    try:
+        await file.download_to_drive(file_path)
+    except TelegramError as e:
+        logger.error(f"❌ Téléchargement Telegram échoué pour {username} (id={user_id}) : {e}")
+        return
+
+    try:
+        size = os.path.getsize(file_path)
+        if not upload_to_immich(file_path, config["api_key"], config["album_id"]):
+            return
+
+        if check_quality and size < 1_048_576:
+            await context.bot.send_photo(
+                chat_id=update.effective_chat.id,
+                photo=open(IMG_PATH, 'rb'),
+                caption='⚠️ La photo est de *mauvaise qualité*.\n Pense à la télécharger via *Fichier > Galerie*. 😉',
+                parse_mode='Markdown',
             )
-
-        if response.status_code == 201:
-            logger.info(f"✅ Fichier envoyé : {os.path.basename(file_path)}")
-            logger.debug(f"Réponse upload : {response.json()}")
-            logger.debug(f"Réponse album : {response_album.text}")
-        else:
-            logger.error(f"❌ Échec de l'envoi : {response.status_code} - {response.text}")
-
-    except Exception as e:
-        logger.exception(f"🚨 Erreur lors de l'envoi : {file_path} - {e}")
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     username = update.message.from_user.full_name
-    config = get_user_config(user_id)
     logger.info(f"📷 Photo reçue de {username} (id={user_id})")
 
     photo = update.message.photo[-1]
-    file = await photo.get_file()
-    file_path = os.path.join(tempfile.gettempdir(), f"{file.file_id}.jpg")
-
-    await file.download_to_drive(file_path)
-    size = os.path.getsize(file_path)
-
-    upload_to_immich(file_path, config["api_key"], config["album_id"])
-    os.remove(file_path)
-
-    if size < 1_048_576:
-        await context.bot.send_photo(
-            chat_id=update.effective_chat.id,
-            photo=open(IMG_PATH, 'rb'),
-            caption='⚠️ La photo est de *mauvaise qualité*.\n Pense à la télécharger via *Fichier > Galerie*. 😉',
-            parse_mode='Markdown',
-        )
+    await _process_media(update, context, photo, ext_fallback=".jpg", check_quality=True)
 
 
 async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     username = update.message.from_user.full_name
-    config = get_user_config(user_id)
     logger.info(f"🎥 Vidéo reçue de {username} (id={user_id})")
 
     video = update.message.video
-    file = await video.get_file()
-    ext = os.path.splitext(video.file_name)[-1] if video.file_name else ".mp4"
-    file_path = os.path.join(tempfile.gettempdir(), f"{file.file_id}{ext}")
-
-    await file.download_to_drive(file_path)
-
-    upload_to_immich(file_path, config["api_key"], config["album_id"])
-    os.remove(file_path)
+    await _process_media(update, context, video, ext_fallback=".mp4", check_quality=False)
 
 
 async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     username = update.message.from_user.full_name
-    config = get_user_config(user_id)
 
     doc = update.message.document
     if not (doc.mime_type.startswith("image/") or doc.mime_type.startswith("video/")):
         return
     logger.info(f"📎 Document ({doc.mime_type}) reçu de {username} (id={user_id})")
 
-    file = await doc.get_file()
-    ext = os.path.splitext(doc.file_name)[-1]
-    file_path = os.path.join(tempfile.gettempdir(), f"{doc.file_id}{ext}")
+    is_image = doc.mime_type.startswith("image/")
+    ext_fallback = ".jpg" if is_image else ".mp4"
+    await _process_media(update, context, doc, ext_fallback=ext_fallback, check_quality=is_image)
 
-    await file.download_to_drive(file_path)
-    size = os.path.getsize(file_path)
 
-    upload_to_immich(file_path, config["api_key"], config["album_id"])
-    os.remove(file_path)
-
-    if size < 1_048_576:
-        await context.bot.send_photo(
-            chat_id=update.effective_chat.id,
-            photo=open(IMG_PATH, 'rb'),
-            caption='⚠️ La photo est de *mauvaise qualité*.\n Pense à la télécharger via *Fichier > Galerie*. 😉',
-            parse_mode='Markdown',
-        )
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    """Filet de sécurité pour toute exception non interceptée par les handlers."""
+    logger.error(f"🚨 Exception non gérée pour l'update {update}", exc_info=context.error)
 
 
 async def monid_handler(update: Update, _context: ContextTypes.DEFAULT_TYPE):
@@ -190,5 +217,6 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
     app.add_handler(MessageHandler(filters.VIDEO, video_handler))
     app.add_handler(MessageHandler(filters.Document.IMAGE | filters.Document.VIDEO, document_handler))
+    app.add_error_handler(error_handler)
     logger.info("🤖 Bot actif, en attente de photos…")
     app.run_polling()
