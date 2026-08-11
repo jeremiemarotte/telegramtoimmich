@@ -58,7 +58,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
-        logging.FileHandler("/tmp/bot.log", encoding="utf-8"),
+        logging.FileHandler(os.path.join(tempfile.gettempdir(), "bot.log"), encoding="utf-8"),
         logging.StreamHandler(stream=open(1, "w", encoding="utf-8", closefd=False)),
     ]
 )
@@ -94,14 +94,18 @@ def upload_to_immich(file_path: str, api_key: str, album_id: str) -> bool:
         logger.error(f"🚨 Immich injoignable lors de l'upload de {os.path.basename(file_path)} : {e}")
         return False
 
-    if response.status_code != 201:
+    if response.status_code not in (200, 201):
         logger.error(
             f"❌ Échec de l'upload Immich ({response.status_code}) pour {os.path.basename(file_path)} : {response.text}"
         )
         return False
 
-    id_asset = response.json().get('id')
-    logger.info(f"✅ Fichier envoyé à Immich : {os.path.basename(file_path)} (asset={id_asset})")
+    body = response.json()
+    id_asset = body.get('id')
+    if response.status_code == 200:
+        logger.info(f"↺ Déjà présent sur Immich (doublon détecté) : {os.path.basename(file_path)} (asset={id_asset})")
+    else:
+        logger.info(f"✅ Fichier envoyé à Immich : {os.path.basename(file_path)} (asset={id_asset})")
 
     try:
         response_album = requests.put(
