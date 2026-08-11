@@ -55,7 +55,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
-        logging.FileHandler("bot.log", encoding="utf-8"),
+        logging.FileHandler("/tmp/bot.log", encoding="utf-8"),
         logging.StreamHandler(stream=open(1, "w", encoding="utf-8", closefd=False)),
     ]
 )
@@ -106,7 +106,9 @@ def upload_to_immich(file_path: str, api_key: str, album_id: str):
 
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
+    username = update.message.from_user.full_name
     config = get_user_config(user_id)
+    logger.info(f"📷 Photo reçue de {username} (id={user_id})")
 
     photo = update.message.photo[-1]
     file = await photo.get_file()
@@ -129,7 +131,9 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
+    username = update.message.from_user.full_name
     config = get_user_config(user_id)
+    logger.info(f"🎥 Vidéo reçue de {username} (id={user_id})")
 
     video = update.message.video
     file = await video.get_file()
@@ -144,11 +148,13 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
+    username = update.message.from_user.full_name
     config = get_user_config(user_id)
 
     doc = update.message.document
     if not (doc.mime_type.startswith("image/") or doc.mime_type.startswith("video/")):
         return
+    logger.info(f"📎 Document ({doc.mime_type}) reçu de {username} (id={user_id})")
 
     file = await doc.get_file()
     ext = os.path.splitext(doc.file_name)[-1]
