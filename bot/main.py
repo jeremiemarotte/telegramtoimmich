@@ -14,9 +14,11 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-IMG_PATH = "/app/assets/explaination.png"
-
 load_dotenv()
+
+IMG_PATH = "/app/assets/explaination.png"
+FAILED_UPLOADS_DIR = os.getenv("FAILED_UPLOADS_DIR", os.path.join(tempfile.gettempdir(), "failed_uploads"))
+os.makedirs(FAILED_UPLOADS_DIR, exist_ok=True)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 IMMICH_API_URL = os.getenv("IMMICH_API_URL")
@@ -121,6 +123,23 @@ def upload_to_immich(file_path: str, api_key: str, album_id: str) -> bool:
     return True
 
 
+def _quarantine_failed_upload(file_path: str, user_id: int, username: str) -> None:
+    """Déplace un fichier dont l'upload Immich a échoué vers FAILED_UPLOADS_DIR pour un retry ultérieur."""
+    dest = os.path.join(FAILED_UPLOADS_DIR, os.path.basename(file_path))
+    manifest = {
+        "user_id": user_id,
+        "username": username,
+        "received_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        os.replace(file_path, dest)
+        with open(f"{dest}.json", "w", encoding="utf-8") as f:
+            json.dump(manifest, f)
+        logger.warning(f"📦 Fichier mis en quarantaine pour retry : {dest}")
+    except OSError as e:
+        logger.error(f"🚨 Impossible de mettre {file_path} en quarantaine : {e}")
+
+
 async def _process_media(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -151,6 +170,7 @@ async def _process_media(
     try:
         size = os.path.getsize(file_path)
         if not upload_to_immich(file_path, config["api_key"], config["album_id"]):
+            _quarantine_failed_upload(file_path, user_id, username)
             return
 
         if check_quality and size < 1_048_576:

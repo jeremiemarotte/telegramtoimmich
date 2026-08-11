@@ -5,6 +5,8 @@ services:
     container_name: telegram-bot
     image: ghcr.io/jeremiemarotte/telegramtoimmich:latest
     restart: unless-stopped
+    volumes:
+      - ./data:/tmp # Stockage temporaire des photos + quarantaine des uploads échoués
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       IMMICH_API_URL: ${IMMICH_API_URL}
