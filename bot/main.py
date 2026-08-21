@@ -89,7 +89,7 @@ def upload_to_immich(file_path: str, api_key: str, album_id: str) -> bool:
                 'fileModifiedAt': datetime.fromtimestamp(stats.st_mtime, tz=timezone.utc).isoformat(),
                 'isFavorite': 'false',
             }
-            response = requests.post(f"{IMMICH_API_URL}/assets", headers=headers_upload, files=files, data=data)
+            response = requests.post(f"{IMMICH_API_URL}/assets", headers=headers_upload, files=files, data=data, timeout=60)
     except requests.exceptions.RequestException as e:
         logger.error(f"🚨 Immich injoignable lors de l'upload de {os.path.basename(file_path)} : {e}")
         return False
@@ -112,6 +112,7 @@ def upload_to_immich(file_path: str, api_key: str, album_id: str) -> bool:
             f"{IMMICH_API_URL}/albums/{album_id}/assets",
             headers=headers_album,
             data=json.dumps({"ids": [id_asset]}),
+            timeout=30,
         )
     except requests.exceptions.RequestException as e:
         logger.error(f"🚨 Immich injoignable lors de l'ajout à l'album {album_id} (asset={id_asset}) : {e}")
@@ -235,7 +236,7 @@ async def monid_handler(update: Update, _context: ContextTypes.DEFAULT_TYPE):
 
 
 if __name__ == '__main__':
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).read_timeout(60).write_timeout(60).connect_timeout(60).build()
 
     app.add_handler(CommandHandler("monid", monid_handler))
     app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
