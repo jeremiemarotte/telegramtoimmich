@@ -21,6 +21,9 @@ FAILED_UPLOADS_DIR = os.getenv("FAILED_UPLOADS_DIR", os.path.join(tempfile.gette
 os.makedirs(FAILED_UPLOADS_DIR, exist_ok=True)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+# URL du serveur Bot API auto-hébergé (ex: http://telegram-bot-api:8081), pour dépasser
+# la limite de téléchargement de 20 Mo imposée par l'API cloud de Telegram.
+TELEGRAM_API_BASE_URL = os.getenv("TELEGRAM_API_BASE_URL")
 IMMICH_API_URL = os.getenv("IMMICH_API_URL")
 
 # Config par défaut (fallback si l'utilisateur n'est pas mappé)
@@ -236,7 +239,11 @@ async def monid_handler(update: Update, _context: ContextTypes.DEFAULT_TYPE):
 
 
 if __name__ == '__main__':
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).read_timeout(60).write_timeout(60).connect_timeout(60).build()
+    builder = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).read_timeout(60).write_timeout(60).connect_timeout(60)
+    if TELEGRAM_API_BASE_URL:
+        logger.info(f"🌐 Utilisation du serveur Bot API auto-hébergé : {TELEGRAM_API_BASE_URL}")
+        builder = builder.base_url(f"{TELEGRAM_API_BASE_URL}/bot").base_file_url(f"{TELEGRAM_API_BASE_URL}/file/bot")
+    app = builder.build()
 
     app.add_handler(CommandHandler("monid", monid_handler))
     app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
