@@ -8,6 +8,7 @@ services:
     environment:
       TELEGRAM_API_ID: ${TELEGRAM_API_ID}
       TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
+      TELEGRAM_LOCAL: "1" # Nécessaire pour que les fichiers soient servis (sinon 404 au download)
     volumes:
       - ./data/bot-api:/var/lib/telegram-bot-api
 
@@ -19,6 +20,7 @@ services:
       - telegram-bot-api
     volumes:
       - ./data:/tmp # Stockage temporaire des photos + quarantaine des uploads échoués
+      - ./data/bot-api:/var/lib/telegram-bot-api:ro # Même volume que telegram-bot-api : requis par le mode local
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       TELEGRAM_API_BASE_URL: http://telegram-bot-api:8081

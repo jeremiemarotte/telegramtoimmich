@@ -242,7 +242,11 @@ if __name__ == '__main__':
     builder = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).read_timeout(60).write_timeout(60).connect_timeout(60)
     if TELEGRAM_API_BASE_URL:
         logger.info(f"🌐 Utilisation du serveur Bot API auto-hébergé : {TELEGRAM_API_BASE_URL}")
-        builder = builder.base_url(f"{TELEGRAM_API_BASE_URL}/bot").base_file_url(f"{TELEGRAM_API_BASE_URL}/file/bot")
+        builder = (
+            builder.base_url(f"{TELEGRAM_API_BASE_URL}/bot")
+            .base_file_url(f"{TELEGRAM_API_BASE_URL}/file/bot")
+            .local_mode(True)
+        )
     app = builder.build()
 
     app.add_handler(CommandHandler("monid", monid_handler))
