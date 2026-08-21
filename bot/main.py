@@ -5,6 +5,7 @@ from telegram.ext import (
 )
 from telegram.error import TelegramError
 import logging
+from logging.handlers import RotatingFileHandler
 import requests
 import os
 from dotenv import load_dotenv
@@ -57,14 +58,39 @@ def get_user_config(telegram_user_id: int) -> dict:
     }
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler(os.path.join(tempfile.gettempdir(), "bot.log"), encoding="utf-8"),
-        logging.StreamHandler(stream=open(1, "w", encoding="utf-8", closefd=False)),
-    ]
+class _MaxLevelFilter(logging.Filter):
+    """Ne laisse passer que les messages de niveau <= max_level."""
+
+    def __init__(self, max_level: int):
+        super().__init__()
+        self.max_level = max_level
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.levelno <= self.max_level
+
+
+_LOG_FORMAT = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+
+# bot.log : uniquement les messages INFO, avec rotation pour éviter qu'il grossisse indéfiniment.
+_info_handler = RotatingFileHandler(
+    os.path.join(tempfile.gettempdir(), "bot.log"), maxBytes=5_000_000, backupCount=3, encoding="utf-8"
 )
+_info_handler.setLevel(logging.INFO)
+_info_handler.addFilter(_MaxLevelFilter(logging.INFO))
+_info_handler.setFormatter(_LOG_FORMAT)
+
+# bot.error.log : avertissements et erreurs, conservés séparément et plus longtemps.
+_error_handler = RotatingFileHandler(
+    os.path.join(tempfile.gettempdir(), "bot.error.log"), maxBytes=5_000_000, backupCount=5, encoding="utf-8"
+)
+_error_handler.setLevel(logging.WARNING)
+_error_handler.setFormatter(_LOG_FORMAT)
+
+_stream_handler = logging.StreamHandler(stream=open(1, "w", encoding="utf-8", closefd=False))
+_stream_handler.setLevel(logging.INFO)
+_stream_handler.setFormatter(_LOG_FORMAT)
+
+logging.basicConfig(level=logging.INFO, handlers=[_info_handler, _error_handler, _stream_handler])
 
 logger = logging.getLogger(__name__)
 
